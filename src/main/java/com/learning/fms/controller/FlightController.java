@@ -1,4 +1,4 @@
-package com.learning.fms.Controller;
+package com.learning.fms.controller;
 
 import com.learning.fms.entity.Flight;
 import com.learning.fms.service.FlightService;

@@ -4,6 +4,7 @@ import com.learning.fms.dto.JwtAuthResponseDto;
 import com.learning.fms.dto.LoginDto;
 import com.learning.fms.dto.RegisterDto;
 import com.learning.fms.entity.RoleType;
+import com.learning.fms.entity.User;
 import com.learning.fms.entity.UserRole;
 import com.learning.fms.exception.FoundException;
 import com.learning.fms.exception.InvalidInputException;
@@ -21,6 +22,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -51,12 +54,13 @@ public class UserServiceImpl implements UserService {
         }
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword()));
+                new UsernamePasswordAuthenticationToken(user.getUuid(), loginDto.getPassword()));
+        System.out.println(authentication.getName());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         var token = jwtTokenProvider.generateToken(authentication);
 
-        var roles = userRoleRepository.getByUser_Uuid(user.getUuid())
+        var roles = user.getRoles()
                 .stream().map(userRole -> userRole.getRole().toString())
                 .toList();
 
@@ -72,11 +76,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public void register(RegisterDto registerDto) {
         var userExistsByEmail = userRepository.findByEmail(registerDto.getEmail().trim());
-        if(userExistsByEmail != null) {
+        if (userExistsByEmail != null) {
             throw new FoundException("EMAIL_ALREADY_EXISTS", "User already exists with email: " + registerDto.getEmail());
         }
 
-        if(!registerDto.getPassword().equals(registerDto.getConfirmPassword())) {
+        if (!registerDto.getPassword().equals(registerDto.getConfirmPassword())) {
             throw new InvalidInputException("INVALID_INPUT", "Passwords are not matched");
         }
 
@@ -88,5 +92,11 @@ public class UserServiceImpl implements UserService {
                 .user(savedUser)
                 .role(RoleType.CUSTOMER)
                 .build());
+    }
+
+    @Override
+    public User getMe() {
+        var uuid = UUID.fromString(SecurityContextHolder.getContext().getAuthentication().getName());
+        return userRepository.findById(uuid).get();
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,18 +27,17 @@ public class CustomUserDetailsService implements UserDetailsService {
     private static final String ROLE_PREFIX = "ROLE_";
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        var user = userRepository.findByEmail(email);
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found with email: " + email);
+    public UserDetails loadUserByUsername(String uuid) throws UsernameNotFoundException {
+        var userOptional = userRepository.findById(UUID.fromString(uuid));
+        if (userOptional.isEmpty()) {
+            throw new UsernameNotFoundException("User not found");
         }
 
-        var userRoles = userRoleRepository.getByUser_Uuid(user.getUuid());
-
-        Set<GrantedAuthority> authorities = userRoles.stream()
+        var user = userOptional.get();
+        Set<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(userRole -> new SimpleGrantedAuthority(ROLE_PREFIX + userRole.getRole()))
                 .collect(Collectors.toSet());
 
-        return new User(user.getEmail(), user.getPassword(), authorities);
+        return new User(user.getUuid().toString(), user.getPassword(), authorities);
     }
 }
